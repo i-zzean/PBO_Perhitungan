@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalkulator - Riwayat Perhitungan</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <style>
+      body {
+        background: #f4f6fb;
+        font-family: Arial, sans-serif;
+      }
+
+      .container {
+        max-width: 1000px;
+      }
+
+      .calculator-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+      }
+
+      .page-title {
+        color: #263248;
+        font-weight: 700;
+      }
+
+      .form-control,
+      .form-select {
+        padding: 12px;
+        border-radius: 9px;
+      }
+
+      .btn-calculate {
+        width: 100%;
+        padding: 12px;
+        border-radius: 9px;
+        background: #4f46e5;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .btn-calculate:hover {
+        background: #3730a3;
+        color: #fff;
+      }
+
+      .result-box {
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #3730a3;
+        font-weight: 700;
+      }
+
+      .table th,
+      .table td {
+        padding: 14px;
+        vertical-align: middle;
+      }
+
+      .table thead th {
+        background: #eef2ff;
+        color: #263248;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container py-5">
+      <!-- Judul halaman -->
+      <div class="text-center mb-4">
+        <h2 class="page-title">Kalkulator Sederhana</h2>
+        <p class="text-secondary">Lakukan perhitungan dan lihat riwayat operasi kamu.</p>
+      </div>
+
+      <!-- Form perhitungan baru -->
+      <div class="calculator-card mb-5">
+        <h5 class="fw-bold mb-4">Form Perhitungan</h5>
+
+        <form th:action="@{/perhitungan/simpan}" th:object="${perhitungan}" method="post" id="formPerhitungan" onsubmit="return validasiSebelumSimpan(event)">
+          <input type="hidden" th:field="*{idOperasi}" />
+
+          <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+              <label for="bilangan1" class="form-label fw-semibold">Bilangan Pertama</label>
+              <input type="number" step="any" th:field="*{bilangan1}" id="bilangan1" class="form-control" placeholder="Masukkan bilangan pertama" required />
+            </div>
+
+            <div class="col-md-2">
+              <label for="operator" class="form-label fw-semibold">Operator</label>
+              <select th:field="*{operator}" id="operator" class="form-select" required>
+                <option value="+">+</option>
+                <option value="-">-</option>
+                <option value="*">*</option>
+                <option value="/">/</option>
+              </select>
+            </div>
+
+            <div class="col-md-5">
+              <label for="bilangan2" class="form-label fw-semibold">Bilangan Kedua</label>
+              <input type="number" step="any" th:field="*{bilangan2}" id="bilangan2" class="form-control" placeholder="Masukkan bilangan kedua" required />
+            </div>
+
+            <div class="col-12">
+              <button type="button" class="btn btn-calculate shadow-sm" onclick="hitungUtama()">= Hitung</button>
+            </div>
+
+            <div class="col-12">
+              <label for="hasil" class="form-label fw-semibold">Hasil Perhitungan</label>
+              <input type="text" id="hasil" name="hasil" class="form-control result-box" placeholder="Hasil akan muncul di sini" readonly required />
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-success">Simpan Perhitungan</button>
+              <button type="button" class="btn btn-secondary" onclick="resetFormUtama()">Reset</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabel riwayat -->
+      <div class="calculator-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Riwayat Perhitungan</h5>
+          <span class="badge text-bg-primary" th:text="${#lists.size(listRiwayatOperasi)} + ' Data'">0 Data</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover text-center">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Bilangan 1</th>
+                <th>Operator</th>
+                <th>Bilangan 2</th>
+                <th>Hasil</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr th:each="dns, status : ${listRiwayatOperasi}">
+                <td th:text="${status.count}"></td>
+                <td th:text="${dns.bilangan1}"></td>
+                <td th:text="${dns.operator}"></td>
+                <td th:text="${dns.bilangan2}"></td>
+
+                <!-- Hasil dihitung ulang via JS -->
+                <td
+                  class="hasil-riwayat"
+                  th:attr="data-a=${dns.bilangan1},
+                           data-b=${dns.bilangan2},
+                           data-op=${dns.operator}"
+                ></td>
+
+                <td>
+                  <div class="d-flex justify-content-center gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-warning btn-sm"
+                      th:attr="data-id=${dns.idOperasi},
+                               data-a=${dns.bilangan1},
+                               data-b=${dns.bilangan2},
+                               data-op=${dns.operator}"
+                      onclick="editData(this)"
+                    >
+                      Edit
+                    </button>
+
+                    <form th:action="@{/perhitungan/delete/{id}(id=${dns.idOperasi})}" method="post" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+
+              <tr th:if="${#lists.isEmpty(listRiwayatOperasi)}">
+                <td colspan="6" class="text-secondary py-4">Belum ada riwayat perhitungan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal edit -->
+    <div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="modalEditLabel">Edit Perhitungan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+
+          <form th:action="@{/perhitungan/simpan}" method="post" id="formEdit">
+            <div class="modal-body">
+              <input type="hidden" name="idOperasi" id="editId" />
+
+              <div class="mb-3">
+                <label for="editBilangan1" class="form-label">Bilangan 1</label>
+                <input type="number" step="any" name="bilangan1" id="editBilangan1" class="form-control" required />
+              </div>
+
+              <div class="mb-3">
+                <label for="editOperator" class="form-label">Operator</label>
+                <select name="operator" id="editOperator" class="form-select" required>
+                  <option value="+">+</option>
+                  <option value="-">-</option>
+                  <option value="*">*</option>
+                  <option value="/">/</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="editBilangan2" class="form-label">Bilangan 2</label>
+                <input type="number" step="any" name="bilangan2" id="editBilangan2" class="form-control" required />
+              </div>
+
+              <div class="mb-3">
+                <label for="editHasil" class="form-label">Hasil</label>
+                <input type="text" name="hasil" id="editHasil" class="form-control result-box" placeholder="Hasil perhitungan" readonly required />
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Fungsi utama kalkulasi matematika
+      function hitungAngka(angka1, angka2, operator) {
+        switch (operator) {
+          case "+":
+            return angka1 + angka2;
+          case "-":
+            return angka1 - angka2;
+          case "*":
+            return angka1 * angka2;
+          case "/":
+            return angka2 === 0 ? "Tidak terdefinisi" : angka1 / angka2;
+          default:
+            return "Operator tidak dikenal";
+        }
+      }
+
+      // Menghitung nilai dari form utama saat tombol Hitung ditekan
+      function hitungUtama() {
+        const angka1 = parseFloat(document.getElementById("bilangan1").value);
+        const angka2 = parseFloat(document.getElementById("bilangan2").value);
+        const operator = document.getElementById("operator").value;
+
+        if (Number.isNaN(angka1) || Number.isNaN(angka2)) {
+          alert("Masukkan kedua bilangan terlebih dahulu!");
+          return;
+        }
+
+        document.getElementById("hasil").value = hitungAngka(angka1, angka2, operator);
+      }
+
+      // Validasi sebelum form utama disimpan ke database
+      function validasiSebelumSimpan(event) {
+        const hasilInput = document.getElementById("hasil").value;
+        if (!hasilInput || hasilInput === "Tidak terdefinisi" || hasilInput === "Operator tidak dikenal") {
+          alert("Silakan klik tombol '= Hitung' terlebih dahulu untuk mendapatkan hasil yang valid!");
+          event.preventDefault();
+          return false;
+        }
+        return true;
+      }
+
+      // Render hasil kalkulasi otomatis untuk baris-baris riwayat pada tabel
+      document.querySelectorAll(".hasil-riwayat").forEach(function (cell) {
+        const angka1 = parseFloat(cell.dataset.a);
+        const angka2 = parseFloat(cell.dataset.b);
+        const operator = cell.dataset.op;
+
+        cell.textContent = hitungAngka(angka1, angka2, operator);
+      });
+
+      // Membuka modal edit dan memetakan data lama
+      function editData(button) {
+        document.getElementById("editId").value = button.dataset.id;
+        document.getElementById("editBilangan1").value = button.dataset.a;
+        document.getElementById("editBilangan2").value = button.dataset.b;
+        document.getElementById("editOperator").value = button.dataset.op;
+
+        hitungEdit();
+
+        const modalElement = document.getElementById("modalEdit");
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+      }
+
+      // Kalkulasi dinamis di dalam modal edit
+      function hitungEdit() {
+        const angka1 = parseFloat(document.getElementById("editBilangan1").value);
+        const angka2 = parseFloat(document.getElementById("editBilangan2").value);
+        const operator = document.getElementById("editOperator").value;
+        const hasilInput = document.getElementById("editHasil");
+
+        if (Number.isNaN(angka1) || Number.isNaN(angka2)) {
+          hasilInput.value = "";
+          return;
+        }
+
+        hasilInput.value = hitungAngka(angka1, angka2, operator);
+      }
+
+      // Event listener untuk memantau perubahan input pada modal edit
+      ["editBilangan1", "editBilangan2", "editOperator"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", hitungEdit);
+        document.getElementById(id).addEventListener("change", hitungEdit);
+      });
+
+      // Reset form utama ke kondisi awal
+      function resetFormUtama() {
+        document.getElementById("formPerhitungan").reset();
+        document.getElementById("hasil").value = "";
+      }
+    </script>
+  </body>
+</html>
